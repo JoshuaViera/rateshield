@@ -35,7 +35,7 @@ export default function CostBreakdownChart({
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) => [`$${value.toFixed(2)}`, ""]}
+            formatter={(value) => [`$${Number(value).toFixed(2)}`, ""]}
             contentStyle={{
               borderRadius: "8px",
               border: "1px solid #e5e7eb",
