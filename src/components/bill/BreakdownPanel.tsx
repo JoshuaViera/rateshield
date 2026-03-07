@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { billData, categories, F, FM } from "@/lib/data/billData";
+import { useBillStore } from "@/stores/billStore";
 import InteractiveDonut from "./InteractiveDonut";
 import CategoryDetail from "./CategoryDetail";
 
@@ -9,9 +10,6 @@ interface BreakdownPanelProps {
   activeSection: string | null;
   setCurrentView?: (v: string) => void;
 }
-
-const REALISTIC_SAVINGS = 33.02;
-const FIXED_CHARGES = 128.20;
 
 // Map bill panel sections to a default category key
 const sectionToCat: Record<string, string> = {
@@ -21,11 +19,27 @@ const sectionToCat: Record<string, string> = {
 
 export default function BreakdownPanel({ activeSection, setCurrentView }: BreakdownPanelProps) {
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const { result } = useBillStore();
 
   const effectiveCat = (activeSection ? sectionToCat[activeSection] : null) || activeCat;
   const selectedCat = effectiveCat
     ? categories.find((c) => c.key === effectiveCat) || null
     : null;
+
+  // Use real total when available, fallback to demo
+  const total = result ? result.input.totalAmount : billData.total;
+
+  // Savings = usage-driven portion (what can be reduced)
+  // When real: use usageDrivenCents from the decompose result
+  // When demo: use hardcoded $33.02
+  const savingsDollars = result
+    ? result.usageDrivenCents / 100
+    : 33.02;
+  const fixedDollars = total - savingsDollars;
+
+  // All-in effective rate (total / kWh)
+  const kWh = result ? result.input.kwhUsage : billData.kwh;
+  const effectiveRate = kWh > 0 ? (total / kWh * 100).toFixed(2) : "33.66";
 
   return (
     <div>
@@ -42,7 +56,7 @@ export default function BreakdownPanel({ activeSection, setCurrentView }: Breakd
         Bill Breakdown
       </div>
       <div style={{ fontSize: 12, color: "#6B7280", fontFamily: F, marginBottom: 18 }}>
-        Where every dollar of your ${billData.total.toFixed(2)} goes
+        Where every dollar of your ${total.toFixed(2)} goes
       </div>
 
       {/* Savings Bar */}
@@ -57,7 +71,7 @@ export default function BreakdownPanel({ activeSection, setCurrentView }: Breakd
       >
         <div
           style={{
-            width: `${(REALISTIC_SAVINGS / billData.total) * 100}%`,
+            width: `${Math.min((savingsDollars / total) * 100, 100)}%`,
             background: "#0D9488",
             transition: "width 0.3s ease",
           }}
@@ -78,14 +92,14 @@ export default function BreakdownPanel({ activeSection, setCurrentView }: Breakd
           <div style={{ width: 8, height: 8, borderRadius: 99, background: "#0D9488" }} />
           <span style={{ color: "#6B7280" }}>Potential savings</span>
           <span style={{ fontWeight: 700, color: "#0D9488", fontFamily: FM }}>
-            ~${REALISTIC_SAVINGS.toFixed(0)}/mo
+            ~${savingsDollars.toFixed(0)}/mo
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <div style={{ width: 8, height: 8, borderRadius: 99, background: "#D1D5DB" }} />
           <span style={{ color: "#6B7280" }}>Fixed &amp; regulated</span>
           <span style={{ fontWeight: 700, color: "#6B7280", fontFamily: FM }}>
-            ${FIXED_CHARGES.toFixed(2)}/mo
+            ${fixedDollars.toFixed(2)}/mo
           </span>
         </div>
       </div>
@@ -100,11 +114,11 @@ export default function BreakdownPanel({ activeSection, setCurrentView }: Breakd
         }}
       >
         Based on switching ESCO + LED bulbs + smart thermostat + TOU rate. Your
-        all-in variable rate is 33.66¢/kWh.
+        all-in rate is {effectiveRate}¢/kWh.
       </div>
 
       {/* Interactive Donut */}
-      <InteractiveDonut activeCat={effectiveCat} setActiveCat={setActiveCat} />
+      <InteractiveDonut activeCat={effectiveCat} setActiveCat={setActiveCat} totalAmount={total} />
 
       {/* Category Detail or Default State */}
       <div style={{ marginTop: 24 }}>
@@ -140,9 +154,9 @@ export default function BreakdownPanel({ activeSection, setCurrentView }: Breakd
               }}
             >
               <div style={{ fontSize: 12, color: "#92400E", fontFamily: F, lineHeight: 1.6 }}>
-                Your all-in variable rate is <strong>33.66¢/kWh</strong>. Fixed charges
-                like the basic service fee ($20.91) and taxes ($37.95 total) are set by
-                regulators — you pay those regardless of usage.
+                Your all-in rate is <strong>{effectiveRate}¢/kWh</strong>. Fixed charges
+                like the Basic Service fee ($16.58) and taxes are set by regulators —
+                you pay those regardless of usage.
               </div>
               <div
                 style={{
@@ -155,7 +169,7 @@ export default function BreakdownPanel({ activeSection, setCurrentView }: Breakd
                 }}
                 onClick={() => setCurrentView?.("compare")}
               >
-                See how switching suppliers could save ~$11/mo →
+                See how switching suppliers could save money →
               </div>
             </div>
           </>

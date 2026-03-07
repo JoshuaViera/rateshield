@@ -5,13 +5,18 @@ import { categories, F, FM } from "@/lib/data/billData";
 interface InteractiveDonutProps {
   activeCat: string | null;
   setActiveCat: (key: string | null) => void;
+  totalAmount?: number;
 }
 
 export default function InteractiveDonut({
   activeCat,
   setActiveCat,
+  totalAmount,
 }: InteractiveDonutProps) {
-  const total = categories.reduce((s, c) => s + c.amount, 0);
+  const billDataTotal = categories.reduce((s, c) => s + c.amount, 0);
+  const total = totalAmount ?? billDataTotal;
+  // Scale factor to convert billData amounts to real bill amounts
+  const scale = billDataTotal > 0 ? total / billDataTotal : 1;
   const size = 220;
   const outer = 90;
   const inner = 52;
@@ -20,7 +25,7 @@ export default function InteractiveDonut({
 
   let cumAngle = -90;
   const segments = categories.map((c) => {
-    const angle = (c.amount / total) * 360;
+    const angle = (c.amount / billDataTotal) * 360;
     const start = cumAngle;
     cumAngle += angle;
     return { ...c, startAngle: start, endAngle: cumAngle, angle };
@@ -105,7 +110,7 @@ export default function InteractiveDonut({
                   letterSpacing: "-0.02em",
                 }}
               >
-                ${activeData.amount.toFixed(2)}
+                ${(activeData.amount * scale).toFixed(2)}
               </div>
               <div
                 style={{
@@ -132,7 +137,7 @@ export default function InteractiveDonut({
                   letterSpacing: "-0.03em",
                 }}
               >
-                $161
+                ${total.toFixed(0)}
               </div>
               <div style={{ fontSize: 10, color: "#9CA3AF", fontFamily: F }}>
                 total bill

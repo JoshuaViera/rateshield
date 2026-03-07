@@ -1,6 +1,8 @@
 "use client";
 
 import { billData, SECTIONS, F, FM } from "@/lib/data/billData";
+import { SC1_TARIFF } from "@/lib/data/tariff-sc1";
+import { useBillStore } from "@/stores/billStore";
 import UsageChart from "./UsageChart";
 
 interface BillPanelProps {
@@ -57,6 +59,130 @@ export default function BillPanel({
   activeSection,
   setActiveSection,
 }: BillPanelProps) {
+  const { result } = useBillStore();
+  const isReal = result !== null;
+
+  // ─── Display values ──────────────────────────────────────────
+  const kWh = isReal ? result.input.kwhUsage : billData.kwh;
+  const totalAmount = isReal ? result.input.totalAmount : billData.total;
+  const period = isReal
+    ? `${result.input.billingPeriodStart} — ${result.input.billingPeriodEnd}`
+    : billData.period;
+  const days = isReal
+    ? Math.round(
+        (new Date(result.input.billingPeriodEnd).getTime() -
+          new Date(result.input.billingPeriodStart).getTime()) /
+          86400000
+      )
+    : billData.days;
+  const avgDaily = (kWh / (days || 30)).toFixed(1);
+
+  // Due date: billing end + 26 days
+  const dueDate = isReal
+    ? (() => {
+        const d = new Date(result.input.billingPeriodEnd);
+        d.setDate(d.getDate() + 26);
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      })()
+    : "Apr 2, 2026";
+
+  // ─── Tariff line-item computation ────────────────────────────
+  let supplyLines: { label: string; amount: number }[] = [];
+  let deliveryLines: { label: string; amount: number }[] = [];
+  let supplyTotal = 0;
+  let deliveryTotal = 0;
+  let supplyRateBadge = "12.61¢/kWh";
+
+  if (isReal) {
+    const r = SC1_TARIFF.rates;
+    const t = SC1_TARIFF;
+
+    // Raw amounts in cents (theoretical from tariff rates)
+    const rawEnergy  = Math.round(kWh * r.energySupply);   // 8.51¢/kWh
+    const rawCap     = Math.round(kWh * r.capacity);        // 2.98¢/kWh
+    const rawTrans   = Math.round(kWh * r.transmission);    // 1.12¢/kWh
+    const rawBasic   = t.basicServiceCharge;                 // 1658¢ flat
+    const rawDistrib = Math.round(kWh * r.distribution);    // 9.87¢/kWh
+    const rawSBC     = Math.round(kWh * r.systemBenefitsCharge); // 0.56¢/kWh
+    const rawRTC     = Math.round(kWh * r.transitionalCharge);   // 0.44¢/kWh
+    const rawNYC     = Math.round(kWh * r.nycSurcharge);         // 0.62¢/kWh
+
+    const rawSupplySub   = rawEnergy + rawCap + rawTrans;
+    const rawDeliverySub = rawBasic + rawDistrib + rawSBC + rawRTC + rawNYC;
+    const rawTax         = Math.round((rawSupplySub + rawDeliverySub) * t.taxRate);
+    // Split tax proportionally
+    const rawSupplyTax   = Math.round(rawTax * rawSupplySub / (rawSupplySub + rawDeliverySub));
+    const rawDeliveryTax = rawTax - rawSupplyTax;
+    const rawTotal       = rawSupplySub + rawDeliverySub + rawTax;
+
+    // Scale to match the user's actual entered total
+    const userCents = Math.round(totalAmount * 100);
+    const factor    = rawTotal > 0 ? userCents / rawTotal : 1;
+    const sc        = (c: number) => Math.round(c * factor) / 100;
+
+    const energy   = sc(rawEnergy);
+    const cap      = sc(rawCap);
+    const trans    = sc(rawTrans);
+    const sTax     = sc(rawSupplyTax);
+    const basic    = sc(rawBasic);
+    const distrib  = sc(rawDistrib);
+    const sbc      = sc(rawSBC);
+    const rtc      = sc(rawRTC);
+    const nyc      = sc(rawNYC);
+    const dTax     = sc(rawDeliveryTax);
+
+    const rawSupplySum   = energy + cap + trans + sTax;
+    const rawDeliverySum = basic + distrib + sbc + rtc + nyc + dTax;
+
+    // Absorb any rounding difference (at most ±$0.02) into delivery tax
+    const remainder = Math.round((totalAmount - rawSupplySum - rawDeliverySum) * 100) / 100;
+    const dTaxAdj   = Math.round((dTax + remainder) * 100) / 100;
+
+    supplyTotal   = Math.round(rawSupplySum * 100) / 100;
+    deliveryTotal = Math.round((rawDeliverySum + remainder) * 100) / 100;
+
+    supplyRateBadge = kWh > 0
+      ? `${(supplyTotal / kWh * 100).toFixed(2)}¢/kWh`
+      : "—";
+
+    supplyLines = [
+      { label: `Energy supply  ·  ${kWh} kWh × 8.51¢`, amount: energy },
+      { label: `Capacity charge  ·  ${kWh} kWh × 2.98¢`, amount: cap },
+      { label: `Transmission  ·  ${kWh} kWh × 1.12¢`, amount: trans },
+      { label: `Taxes & surcharges (8.875%)`, amount: sTax },
+    ];
+
+    deliveryLines = [
+      { label: `Basic Service Charge (flat monthly)`, amount: basic },
+      { label: `Distribution  ·  ${kWh} kWh × 9.87¢`, amount: distrib },
+      { label: `System Benefits Charge  ·  0.56¢/kWh`, amount: sbc },
+      { label: `Transitional Charge  ·  0.44¢/kWh`, amount: rtc },
+      { label: `NYC Surcharge  ·  0.62¢/kWh`, amount: nyc },
+      { label: `Taxes (8.875%)`, amount: dTaxAdj },
+    ];
+  } else {
+    supplyLines = [
+      { label: billData.supply.market.label, amount: billData.supply.market.amount },
+      { label: billData.supply.mfc.label, amount: billData.supply.mfc.amount },
+      { label: billData.supply.grt.label, amount: billData.supply.grt.amount },
+      { label: billData.supply.sales.label, amount: billData.supply.sales.amount },
+    ];
+    deliveryLines = [
+      { label: billData.delivery.basic.label, amount: billData.delivery.basic.amount },
+      { label: billData.delivery.delivery.label, amount: billData.delivery.delivery.amount },
+      { label: billData.delivery.sbc.label, amount: billData.delivery.sbc.amount },
+      { label: billData.delivery.grt.label, amount: billData.delivery.grt.amount },
+      { label: billData.delivery.sales.label, amount: billData.delivery.sales.amount },
+    ];
+    supplyTotal   = billData.supply.total;
+    deliveryTotal = billData.delivery.total;
+  }
+
+  // ─── Style helpers ───────────────────────────────────────────
   const sStyle = (key: string) => ({
     cursor: "pointer" as const,
     padding: "12px 16px",
@@ -144,7 +270,7 @@ export default function BillPanel({
           con<span style={{ fontWeight: 400 }}>Edison</span>
         </div>
         <div style={{ color: "#D1FAE5", fontSize: 11, fontFamily: F }}>
-          RESIDENTIAL · EL1
+          RESIDENTIAL · SC1
         </div>
       </div>
 
@@ -186,7 +312,7 @@ export default function BillPanel({
                 Your bill breakdown
               </div>
               <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: F }}>
-                Billing period: {billData.period} ({billData.days} days)
+                Billing period: {period} ({days} days)
               </div>
             </div>
           </div>
@@ -225,7 +351,7 @@ export default function BillPanel({
                 New charges
               </div>
               <div style={{ fontSize: 11, color: "#6B7280", fontFamily: F }}>
-                Electricity — 30 days
+                Electricity — {days} days
               </div>
               <div
                 style={{
@@ -235,7 +361,7 @@ export default function BillPanel({
                   fontFamily: FM,
                 }}
               >
-                $161.22
+                ${totalAmount.toFixed(2)}
               </div>
             </div>
             <div style={{ flex: 1, textAlign: "right" }}>
@@ -259,7 +385,7 @@ export default function BillPanel({
                   lineHeight: 1,
                 }}
               >
-                $161.22
+                ${totalAmount.toFixed(2)}
               </div>
               <div
                 style={{
@@ -269,7 +395,7 @@ export default function BillPanel({
                   marginTop: 6,
                 }}
               >
-                Due by Apr 2, 2026
+                Due by {dueDate}
               </div>
             </div>
           </div>
@@ -309,7 +435,8 @@ export default function BillPanel({
                   fontFamily: F,
                 }}
               >
-                16.7 <span style={{ fontSize: 10, fontWeight: 500 }}>kWh</span>
+                {avgDaily}{" "}
+                <span style={{ fontSize: 10, fontWeight: 500 }}>kWh</span>
               </span>
             </div>
             <UsageChart />
@@ -325,10 +452,9 @@ export default function BillPanel({
               fontFamily: FM,
             }}
           >
-            <span>Meter #012392458</span>
-            <span>New: {billData.meterNew}</span>
-            <span>Prior: {billData.meterPrior}</span>
-            <span>Usage: {billData.kwh} kWh</span>
+            <span>Service Class: SC1 Residential</span>
+            <span>Usage: {kWh} kWh</span>
+            <span>{days} days</span>
           </div>
         </div>
 
@@ -378,30 +504,20 @@ export default function BillPanel({
                   fontFamily: FM,
                 }}
               >
-                ${billData.supply.total.toFixed(2)}
+                ${supplyTotal.toFixed(2)}
               </span>
             </div>
           </div>
-          <LineItem
-            label={billData.supply.market.label}
-            amount={billData.supply.market.amount}
-          />
-          <LineItem
-            label={billData.supply.mfc.label}
-            amount={billData.supply.mfc.amount}
-          />
-          <LineItem
-            label={billData.supply.grt.label}
-            amount={billData.supply.grt.amount}
-          />
-          <LineItem
-            label={billData.supply.sales.label}
-            amount={billData.supply.sales.amount}
-          />
+
+          {supplyLines.map((line, i) => (
+            <LineItem key={i} label={line.label} amount={line.amount} />
+          ))}
+
           <TotalLine
             label="Total electricity supply charges"
-            amount={billData.supply.total}
+            amount={supplyTotal}
           />
+
           <div
             style={{
               background: "#FFF7ED",
@@ -415,8 +531,8 @@ export default function BillPanel({
               borderLeft: "3px solid #F97316",
             }}
           >
-            Your supply cost: <strong>12.68¢/kWh</strong>. Compare with ESCOs
-            at PowerYourWay.com
+            Your supply cost: <strong>{supplyRateBadge}</strong>. Rates from
+            NY PSC SC1 tariff (effective Jan 22, 2026).
           </div>
         </div>
 
@@ -468,34 +584,20 @@ export default function BillPanel({
                   fontFamily: FM,
                 }}
               >
-                ${billData.delivery.total.toFixed(2)}
+                ${deliveryTotal.toFixed(2)}
               </span>
             </div>
           </div>
-          <LineItem
-            label={billData.delivery.basic.label}
-            amount={billData.delivery.basic.amount}
-          />
-          <LineItem
-            label={billData.delivery.delivery.label}
-            amount={billData.delivery.delivery.amount}
-          />
-          <LineItem
-            label={billData.delivery.sbc.label}
-            amount={billData.delivery.sbc.amount}
-          />
-          <LineItem
-            label={billData.delivery.grt.label}
-            amount={billData.delivery.grt.amount}
-          />
-          <LineItem
-            label={billData.delivery.sales.label}
-            amount={billData.delivery.sales.amount}
-          />
+
+          {deliveryLines.map((line, i) => (
+            <LineItem key={i} label={line.label} amount={line.amount} />
+          ))}
+
           <TotalLine
             label="Total electricity delivery charges"
-            amount={billData.delivery.total}
+            amount={deliveryTotal}
           />
+
           <div
             style={{
               display: "flex",
@@ -508,9 +610,7 @@ export default function BillPanel({
             }}
           >
             <span>Your electricity total</span>
-            <span style={{ fontFamily: FM }}>
-              ${billData.total.toFixed(2)}
-            </span>
+            <span style={{ fontFamily: FM }}>${totalAmount.toFixed(2)}</span>
           </div>
         </div>
       </div>
