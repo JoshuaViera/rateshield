@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "@/src/components/bill/Sidebar";
-import BillPanel from "@/src/components/bill/BillPanel";
-import BreakdownPanel from "@/src/components/bill/BreakdownPanel";
-import { billData, F, FM } from "@/src/lib/data/billData";
-import { useBillStore } from "@/src/stores/billStore";
+import Sidebar from "@/components/bill/Sidebar";
+import BillPanel from "@/components/bill/BillPanel";
+import BreakdownPanel from "@/components/bill/BreakdownPanel";
+import { billData, F, FM } from "@/lib/data/billData";
+import { useBillStore } from "@/stores/billStore";
 
 export default function BillDashboardPage({
   params,
@@ -13,20 +13,20 @@ export default function BillDashboardPage({
   params: { id: string };
 }) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  const { currentResult } = useBillStore();
+  const { result } = useBillStore();
 
   // Use real decomposed data when navigated to /bill/result; fall back to mock for /bill/demo
-  const isReal = params.id === "result" && currentResult !== null;
+  const isReal = params.id === "result" && result !== null;
 
-  const displayTotal = isReal ? currentResult!.input.totalAmount : billData.total;
-  const displayKwh = isReal ? currentResult!.input.kwhUsage : billData.kwh;
+  const displayTotal = isReal ? result!.input.totalAmount : billData.total;
+  const displayKwh = isReal ? result!.input.kwhUsage : billData.kwh;
   const displayPeriod = isReal
-    ? `${currentResult!.input.billingPeriodStart} — ${currentResult!.input.billingPeriodEnd}`
+    ? `${result!.input.billingPeriodStart} — ${result!.input.billingPeriodEnd}`
     : billData.period;
   const displayDays = isReal
     ? (() => {
-        const s = new Date(currentResult!.input.billingPeriodStart);
-        const e = new Date(currentResult!.input.billingPeriodEnd);
+        const s = new Date(result!.input.billingPeriodStart);
+        const e = new Date(result!.input.billingPeriodEnd);
         return Math.round((e.getTime() - s.getTime()) / 86400000);
       })()
     : billData.days;

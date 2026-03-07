@@ -1,22 +1,22 @@
 import { create } from "zustand";
-import { BillInput, DecomposedBill } from "../lib/types/bill";
+import { DecomposeResult } from "../lib/engine/decompose";
 
 interface BillState {
-  currentInput: BillInput | null;
-  currentResult: DecomposedBill | null;
+  result: DecomposeResult | null;
   isLoading: boolean;
-  setInput: (input: BillInput) => void;
-  setResult: (result: DecomposedBill) => void;
+  error: string | null;
+  setResult: (result: DecomposeResult) => void;
   setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   reset: () => void;
 }
 
 export const useBillStore = create<BillState>((set) => ({
-  currentInput: null,
-  currentResult: null,
+  result: null,
   isLoading: false,
-  setInput: (input) => set({ currentInput: input }),
-  setResult: (result) => set({ currentResult: result }),
-  setLoading: (loading) => set({ isLoading: loading }),
-  reset: () => set({ currentInput: null, currentResult: null, isLoading: false }),
+  error: null,
+  setResult: (result) => set({ result, error: null }),
+  setLoading: (isLoading) => set({ isLoading }),
+  setError: (error) => set({ error, isLoading: false }),
+  reset: () => set({ result: null, isLoading: false, error: null }),
 }));

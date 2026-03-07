@@ -2,9 +2,9 @@
 
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useBillStore } from "@/src/stores/billStore";
-import PageShell from "@/src/components/layout/PageShell";
-import { F, FM } from "@/src/lib/data/billData";
+import { useBillStore } from "@/stores/billStore";
+import PageShell from "@/components/layout/PageShell";
+import { F, FM } from "@/lib/data/billData";
 
 interface BillFormData {
   totalAmount: number;
@@ -14,7 +14,7 @@ interface BillFormData {
 
 export default function BillEntryPage() {
   const router = useRouter();
-  const { setInput, setLoading, setResult } = useBillStore();
+  const { setResult, setLoading, setError } = useBillStore();
 
   const {
     register,
@@ -32,10 +32,8 @@ export default function BillEntryPage() {
       kwhUsage: Number(data.kwhUsage),
       billingPeriodStart: start.toISOString().split("T")[0],
       billingPeriodEnd: today.toISOString().split("T")[0],
-      serviceClass: "SC1" as const,
     };
 
-    setInput(billInput);
     setLoading(true);
 
     try {
@@ -46,17 +44,19 @@ export default function BillEntryPage() {
       });
 
       if (!res.ok) {
-        console.error("Decompose API error:", await res.json());
+        const err = await res.json();
+        setError(err.error ?? "Failed to decode bill");
+        setLoading(false);
         router.push("/bill/demo");
         return;
       }
 
       const result = await res.json();
       setResult(result);
-      setLoading(false);
       router.push("/bill/result");
     } catch (err) {
       console.error("Network error:", err);
+      setError("Network error — please try again");
       setLoading(false);
       router.push("/bill/demo");
     }
