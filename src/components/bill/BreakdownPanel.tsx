@@ -7,19 +7,24 @@ import CategoryDetail from "./CategoryDetail";
 
 interface BreakdownPanelProps {
   activeSection: string | null;
+  setCurrentView?: (v: string) => void;
 }
 
-export default function BreakdownPanel({ activeSection }: BreakdownPanelProps) {
+const REALISTIC_SAVINGS = 33.02;
+const FIXED_CHARGES = 128.20;
+
+// Map bill panel sections to a default category key
+const sectionToCat: Record<string, string> = {
+  supply: "wholesale",
+  delivery: "gridDelivery",
+};
+
+export default function BreakdownPanel({ activeSection, setCurrentView }: BreakdownPanelProps) {
   const [activeCat, setActiveCat] = useState<string | null>(null);
 
-  const controllable = categories
-    .filter((c) => c.controllable)
-    .reduce((s, c) => s + c.amount, 0);
-  const uncontrollable = categories
-    .filter((c) => !c.controllable)
-    .reduce((s, c) => s + c.amount, 0);
-  const selectedCat = activeCat
-    ? categories.find((c) => c.key === activeCat) || null
+  const effectiveCat = (activeSection ? sectionToCat[activeSection] : null) || activeCat;
+  const selectedCat = effectiveCat
+    ? categories.find((c) => c.key === effectiveCat) || null
     : null;
 
   return (
@@ -36,18 +41,11 @@ export default function BreakdownPanel({ activeSection }: BreakdownPanelProps) {
       >
         Bill Breakdown
       </div>
-      <div
-        style={{
-          fontSize: 12,
-          color: "#6B7280",
-          fontFamily: F,
-          marginBottom: 18,
-        }}
-      >
+      <div style={{ fontSize: 12, color: "#6B7280", fontFamily: F, marginBottom: 18 }}>
         Where every dollar of your ${billData.total.toFixed(2)} goes
       </div>
 
-      {/* Control Split Bar */}
+      {/* Savings Bar */}
       <div
         style={{
           display: "flex",
@@ -59,209 +57,110 @@ export default function BreakdownPanel({ activeSection }: BreakdownPanelProps) {
       >
         <div
           style={{
-            width: `${(controllable / billData.total) * 100}%`,
+            width: `${(REALISTIC_SAVINGS / billData.total) * 100}%`,
             background: "#0D9488",
             transition: "width 0.3s ease",
           }}
         />
         <div style={{ flex: 1, background: "#D1D5DB" }} />
       </div>
+
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 24,
+          marginBottom: 8,
           fontSize: 12,
           fontFamily: F,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 99,
-              background: "#0D9488",
-            }}
-          />
-          <span style={{ color: "#6B7280" }}>Can reduce</span>
-          <span
-            style={{ fontWeight: 700, color: "#0D9488", fontFamily: FM }}
-          >
-            ${controllable.toFixed(2)}
+          <div style={{ width: 8, height: 8, borderRadius: 99, background: "#0D9488" }} />
+          <span style={{ color: "#6B7280" }}>Potential savings</span>
+          <span style={{ fontWeight: 700, color: "#0D9488", fontFamily: FM }}>
+            ~${REALISTIC_SAVINGS.toFixed(0)}/mo
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 99,
-              background: "#D1D5DB",
-            }}
-          />
-          <span style={{ color: "#6B7280" }}>Can&apos;t control</span>
-          <span
-            style={{ fontWeight: 700, color: "#6B7280", fontFamily: FM }}
-          >
-            ${uncontrollable.toFixed(2)}
+          <div style={{ width: 8, height: 8, borderRadius: 99, background: "#D1D5DB" }} />
+          <span style={{ color: "#6B7280" }}>Fixed &amp; regulated</span>
+          <span style={{ fontWeight: 700, color: "#6B7280", fontFamily: FM }}>
+            ${FIXED_CHARGES.toFixed(2)}/mo
           </span>
         </div>
       </div>
 
+      <div
+        style={{
+          fontSize: 10,
+          color: "#9CA3AF",
+          fontFamily: F,
+          marginBottom: 24,
+          lineHeight: 1.5,
+        }}
+      >
+        Based on switching ESCO + LED bulbs + smart thermostat + TOU rate. Your
+        all-in variable rate is 33.66¢/kWh.
+      </div>
+
       {/* Interactive Donut */}
-      <InteractiveDonut activeCat={activeCat} setActiveCat={setActiveCat} />
+      <InteractiveDonut activeCat={effectiveCat} setActiveCat={setActiveCat} />
 
       {/* Category Detail or Default State */}
-      {selectedCat ? (
-        <div style={{ marginTop: 20 }}>
-          <CategoryDetail cat={selectedCat} />
-        </div>
-      ) : (
-        <div style={{ marginTop: 20 }}>
-          <div
-            style={{
-              background: "#F9FAFB",
-              borderRadius: 12,
-              padding: "14px 16px",
-              textAlign: "center",
-              marginBottom: 20,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                color: "#6B7280",
-                fontFamily: F,
-                lineHeight: 1.6,
-              }}
-            >
-              Click any section of the chart to see
-              <br />
-              what&apos;s driving that cost and why it changed
-            </div>
+      <div style={{ marginTop: 24 }}>
+        {selectedCat ? (
+          <div style={{ animation: "fadeSlideUp 0.3s ease" }}>
+            <CategoryDetail cat={selectedCat} setCurrentView={setCurrentView} />
           </div>
-
-          {/* Key Insight */}
-          <div
-            style={{
-              background: "#FFFBEB",
-              borderRadius: 12,
-              padding: 14,
-              border: "1px solid #FDE68A",
-              marginBottom: 16,
-            }}
-          >
+        ) : (
+          <>
             <div
               style={{
-                fontSize: 12,
-                color: "#92400E",
-                fontFamily: F,
-                lineHeight: 1.6,
+                background: "#F9FAFB",
+                borderRadius: 12,
+                padding: "14px 16px",
+                textAlign: "center",
+                marginBottom: 20,
               }}
             >
-              <strong>~60% of your bill</strong> — ${uncontrollable.toFixed(2)}{" "}
-              — comes from charges set by regulators, market forces, and
-              infrastructure. No individual customer can opt out.
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: "#0D9488",
-                fontFamily: F,
-                fontWeight: 600,
-                marginTop: 6,
-                cursor: "pointer",
-              }}
-            >
-              But ${controllable.toFixed(2)} is influenced by your choices →
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#111827",
-              fontFamily: F,
-              marginBottom: 8,
-            }}
-          >
-            Quick Actions
-          </div>
-          {[
-            {
-              icon: "⚡",
-              title: "Compare energy suppliers",
-              desc: "Your rate: 12.68¢/kWh — ESCOs may offer less",
-              color: "#F97316",
-            },
-            {
-              icon: "☀️",
-              title: "Explore community solar",
-              desc: "5–15% savings, no hardware, bill credits",
-              color: "#F59E0B",
-            },
-            {
-              icon: "📋",
-              title: "See your action plan",
-              desc: "Personalized tips based on your bill",
-              color: "#0D9488",
-            },
-            {
-              icon: "🏛️",
-              title: "Track legislation",
-              desc: "3 active NY bills that could lower your costs",
-              color: "#8B5CF6",
-            },
-          ].map((a, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 12px",
-                background: "#fff",
-                borderRadius: 10,
-                marginBottom: 6,
-                cursor: "pointer",
-                border: "1px solid #E5E7EB",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = a.color;
-                e.currentTarget.style.boxShadow = `0 0 0 1px ${a.color}33`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#E5E7EB";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <span style={{ fontSize: 16 }}>{a.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    color: "#111827",
-                    fontFamily: F,
-                  }}
-                >
-                  {a.title}
-                </div>
-                <div
-                  style={{ fontSize: 11, color: "#6B7280", fontFamily: F }}
-                >
-                  {a.desc}
-                </div>
+              <div style={{ fontSize: 12, color: "#6B7280", fontFamily: F, lineHeight: 1.6 }}>
+                Click any segment on the chart to see
+                <br />
+                what&apos;s driving that specific cost
               </div>
-              <span style={{ color: "#9CA3AF", fontSize: 14 }}>→</span>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div
+              style={{
+                background: "#FFFBEB",
+                borderRadius: 12,
+                padding: 14,
+                border: "1px solid #FDE68A",
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ fontSize: 12, color: "#92400E", fontFamily: F, lineHeight: 1.6 }}>
+                Your all-in variable rate is <strong>33.66¢/kWh</strong>. Fixed charges
+                like the basic service fee ($20.91) and taxes ($37.95 total) are set by
+                regulators — you pay those regardless of usage.
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#0D9488",
+                  fontFamily: F,
+                  fontWeight: 600,
+                  marginTop: 6,
+                  cursor: "pointer",
+                }}
+                onClick={() => setCurrentView?.("compare")}
+              >
+                See how switching suppliers could save ~$11/mo →
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

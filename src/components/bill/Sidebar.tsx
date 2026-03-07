@@ -4,21 +4,26 @@ import { F } from "@/lib/data/billData";
 
 interface SidebarProps {
   activePage?: string;
+  currentView?: string;
+  setCurrentView?: (v: string) => void;
 }
 
-export default function Sidebar({ activePage = "bill" }: SidebarProps) {
-  const items = [
-    { icon: "📄", label: "My Bill", href: "/bill/enter", key: "bill" },
-    { icon: "⚖️", label: "Compare Suppliers", href: "#", key: "compare" },
-    { icon: "⚡", label: "Energy Options", href: "#", key: "energy" },
-    { icon: "📊", label: "My Usage", href: "/history", key: "history" },
-    { icon: "📋", label: "Action Plan", href: "#", key: "plan" },
-    { icon: "🏛️", label: "Legislation", href: "/legislation", key: "legislation" },
+export default function Sidebar({
+  activePage = "bill",
+  currentView,
+  setCurrentView,
+}: SidebarProps) {
+  const dashboardItems = [
+    { icon: "📄", label: "My Bill", key: "bill" },
+    { icon: "📋", label: "Action Plan", key: "actionplan" },
+    { icon: "⚖️", label: "Compare Suppliers", key: "compare" },
   ];
 
-  const bottom = [
+  const pageItems = [
+    { icon: "📄", label: "My Bill", href: "/bill/enter", key: "bill" },
+    { icon: "📊", label: "My Usage", href: "/history", key: "history" },
+    { icon: "🏛️", label: "Legislation", href: "/legislation", key: "legislation" },
     { icon: "❤️", label: "Assistance", href: "/assistance", key: "assistance" },
-    { icon: "⚙️", label: "Settings", href: "#", key: "settings" },
   ];
 
   const navStyle = (active: boolean) => ({
@@ -30,7 +35,7 @@ export default function Sidebar({ activePage = "bill" }: SidebarProps) {
     cursor: "pointer" as const,
     fontSize: 13,
     fontFamily: F,
-    fontWeight: active ? 600 : 400,
+    fontWeight: active ? (600 as const) : (400 as const),
     color: active ? "#5EEAD4" : "#94A3B8",
     background: active ? "rgba(94,234,212,0.08)" : "transparent",
     borderLeft: active ? "3px solid #0D9488" : "3px solid transparent",
@@ -38,6 +43,8 @@ export default function Sidebar({ activePage = "bill" }: SidebarProps) {
     marginBottom: 2,
     textDecoration: "none" as const,
   });
+
+  const isDashboard = !!setCurrentView;
 
   return (
     <div
@@ -70,29 +77,33 @@ export default function Sidebar({ activePage = "bill" }: SidebarProps) {
         >
           Rate<span style={{ color: "#5EEAD4" }}>Shield</span>
         </div>
-        <div
-          style={{
-            fontSize: 10,
-            color: "#64748B",
-            fontFamily: F,
-            marginTop: 2,
-          }}
-        >
+        <div style={{ fontSize: 10, color: "#64748B", fontFamily: F, marginTop: 2 }}>
           NYC Energy Transparency
         </div>
       </div>
 
-      {/* Main nav */}
-      {items.map((it) => (
-        <a key={it.key} href={it.href} style={navStyle(activePage === it.key)}>
-          <span style={{ fontSize: 15 }}>{it.icon}</span>
-          <span>{it.label}</span>
-        </a>
-      ))}
+      {/* Nav Items */}
+      {isDashboard
+        ? dashboardItems.map((it) => (
+            <div
+              key={it.key}
+              style={navStyle(currentView === it.key)}
+              onClick={() => setCurrentView!(it.key)}
+            >
+              <span style={{ fontSize: 15 }}>{it.icon}</span>
+              <span>{it.label}</span>
+            </div>
+          ))
+        : pageItems.map((it) => (
+            <a key={it.key} href={it.href} style={navStyle(activePage === it.key)}>
+              <span style={{ fontSize: 15 }}>{it.icon}</span>
+              <span>{it.label}</span>
+            </a>
+          ))}
 
       <div style={{ flex: 1 }} />
 
-      {/* Bottom nav */}
+      {/* Bottom */}
       <div
         style={{
           borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -100,12 +111,10 @@ export default function Sidebar({ activePage = "bill" }: SidebarProps) {
           marginTop: 12,
         }}
       >
-        {bottom.map((it) => (
-          <a key={it.key} href={it.href} style={navStyle(activePage === it.key)}>
-            <span style={{ fontSize: 15 }}>{it.icon}</span>
-            <span>{it.label}</span>
-          </a>
-        ))}
+        <a href="#" style={navStyle(false)}>
+          <span style={{ fontSize: 15 }}>⚙️</span>
+          <span>Settings</span>
+        </a>
       </div>
 
       {/* User */}
@@ -135,19 +144,10 @@ export default function Sidebar({ activePage = "bill" }: SidebarProps) {
             MR
           </div>
           <div>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#E2E8F0",
-                fontFamily: F,
-              }}
-            >
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#E2E8F0", fontFamily: F }}>
               M. Roman
             </div>
-            <div
-              style={{ fontSize: 10, color: "#64748B", fontFamily: F }}
-            >
+            <div style={{ fontSize: 10, color: "#64748B", fontFamily: F }}>
               SC1 Residential
             </div>
           </div>
