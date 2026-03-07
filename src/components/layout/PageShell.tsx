@@ -1,4 +1,4 @@
-import { F } from "@/src/lib/data/billData";
+import { F } from "@/lib/data/billData";
 
 export default function PageShell({ children }: { children: React.ReactNode }) {
   return (

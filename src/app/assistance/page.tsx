@@ -1,5 +1,5 @@
-import PageShell from "@/src/components/layout/PageShell";
-import { F } from "@/src/lib/data/billData";
+import PageShell from "@/components/layout/PageShell";
+import { F } from "@/lib/data/billData";
 
 const programs = [
   { icon: "🔥", name: "LIHEAP", desc: "Federal heating assistance — up to $350/year for qualifying households", eligibility: "Income below 60% state median", link: "#" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { usageHistory, F } from "@/src/lib/data/billData";
+import { usageHistory, F } from "@/lib/data/billData";
 
 export default function UsageChart() {
   const max = 28;

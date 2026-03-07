@@ -1,6 +1,6 @@
 "use client";
 
-import { F } from "@/src/lib/data/billData";
+import { F } from "@/lib/data/billData";
 
 interface SidebarProps {
   activePage?: string;

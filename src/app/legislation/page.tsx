@@ -1,5 +1,5 @@
-import PageShell from "@/src/components/layout/PageShell";
-import { F, FM } from "@/src/lib/data/billData";
+import PageShell from "@/components/layout/PageShell";
+import { F, FM } from "@/lib/data/billData";
 
 const bills = [
   { number: "S9144", title: "Data Center Energy Cost Allocation Act", status: "In Committee", impact: "Could shift data center grid costs off residential bills" },

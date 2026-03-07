@@ -1,6 +1,6 @@
 "use client";
 
-import { CostCategory, F, FM } from "@/src/lib/data/billData";
+import { CostCategory, F, FM } from "@/lib/data/billData";
 
 interface CategoryDetailProps {
   cat: CostCategory;

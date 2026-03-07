@@ -1,5 +1,5 @@
-import PageShell from "@/src/components/layout/PageShell";
-import { F } from "@/src/lib/data/billData";
+import PageShell from "@/components/layout/PageShell";
+import { F } from "@/lib/data/billData";
 
 export default function HomePage() {
   return (

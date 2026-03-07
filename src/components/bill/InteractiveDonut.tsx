@@ -1,6 +1,6 @@
 "use client";
 
-import { categories, F, FM } from "@/src/lib/data/billData";
+import { categories, F, FM } from "@/lib/data/billData";
 
 interface InteractiveDonutProps {
   activeCat: string | null;

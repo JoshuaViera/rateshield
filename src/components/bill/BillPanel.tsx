@@ -1,6 +1,6 @@
 "use client";
 
-import { billData, SECTIONS, F, FM } from "@/src/lib/data/billData";
+import { billData, SECTIONS, F, FM } from "@/lib/data/billData";
 import UsageChart from "./UsageChart";
 
 interface BillPanelProps {

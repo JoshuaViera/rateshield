@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { billData, categories, F, FM } from "@/src/lib/data/billData";
+import { billData, categories, F, FM } from "@/lib/data/billData";
 import InteractiveDonut from "./InteractiveDonut";
 import CategoryDetail from "./CategoryDetail";
 
