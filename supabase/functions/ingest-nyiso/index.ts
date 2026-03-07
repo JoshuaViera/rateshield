@@ -12,8 +12,9 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// NYISO public CSV — note: HTTP only (HTTPS returns 403), filename has no "DA_" prefix
 const NYISO_BASE_URL =
-  "https://mis.nyiso.com/public/csv/damlbmp";
+  "http://mis.nyiso.com/public/csv/damlbmp";
 const ZONE_J_NAME = "N.Y.C.";
 
 interface NyisoRow {
@@ -91,7 +92,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const nyisoDate = toNyisoDate(targetDate);
-    const csvUrl = `${NYISO_BASE_URL}/${nyisoDate}DA_damlbmp_zone.csv`;
+    const csvUrl = `${NYISO_BASE_URL}/${nyisoDate}damlbmp_zone.csv`;
 
     const csvRes = await fetch(csvUrl);
     if (!csvRes.ok) {
