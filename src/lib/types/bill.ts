@@ -1,33 +1,44 @@
 export interface BillInput {
-  totalAmount: number;    // dollars
-  kwhUsage: number;       // kilowatt-hours
-  billingPeriodStart: string;  // ISO date
-  billingPeriodEnd: string;    // ISO date
+  totalAmount: number;
+  kwhUsage: number;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
   serviceClass: "SC1" | "SC2" | "SC9";
 }
 
-export interface BillBreakdown {
-  energySupply: number;     // cents
-  capacity: number;         // cents
-  transmission: number;     // cents
-  distribution: number;     // cents
-  taxesSurcharges: number;  // cents
-  usageDrivenTotal: number; // cents
-  systemDrivenTotal: number; // cents
-  usageDrivenPercent: number;
-  systemDrivenPercent: number;
+export interface BillComponent {
+  name: string;
+  amount: number;
+  percent: number;
+  usageDriven: boolean;
+  canControl: boolean;
+  description: string;
+  source: string;
+  color: string;
 }
 
-export interface BillAttribution {
-  component: string;
-  explanation: string;
-  sourceCitation: string;
-  canControl: boolean;
+export interface BillBreakdown {
+  components: BillComponent[];
+  controllable: BillComponent[];
+  uncontrollable: BillComponent[];
+  controllableTotal: number;
+  uncontrollableTotal: number;
+  controllablePercent: number;
+  uncontrollablePercent: number;
+  effectiveRate: number;
+  days: number;
+  scaleFactor: number;
+}
+
+export interface Recommendation {
+  title: string;
+  detail: string;
+  savings: string;
+  effort: "Easy" | "Medium" | "Hard";
 }
 
 export interface DecomposedBill {
   input: BillInput;
   breakdown: BillBreakdown;
-  attributions: BillAttribution[];
-  recommendations: string[];
+  recommendations: Recommendation[];
 }

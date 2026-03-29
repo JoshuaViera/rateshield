@@ -1,132 +1,90 @@
-import { applyTariff } from "./tariff";
-import { buildAttributions, Attribution } from "./attribution";
-import { generateRecommendations, Recommendation } from "./recommend";
+import { BillInput, BillComponent, BillBreakdown } from "../types/bill";
+import { getTariffForServiceClass } from "./tariff";
+import { daysBetween } from "../utils/format";
 
-export interface DecomposeInput {
-  totalAmount: number;
-  kwhUsage: number;
-  billingPeriodStart: string;
-  billingPeriodEnd: string;
-}
+/**
+ * Decomposes a Con Edison electricity bill into its real cost components.
+ *
+ * How it works:
+ * 1. Loads the tariff map for the user's service class
+ * 2. Calculates each component using the tariff rates × kWh usage
+ * 3. Computes a scale factor to reconcile the calculated total with the actual bill
+ *    (accounts for monthly adjustment clauses, riders, and seasonal variations
+ *     that aren't captured in the simplified tariff rates)
+ * 4. Classifies each component as controllable (usage-driven) or uncontrollable (system-driven)
+ * 5. Returns the full breakdown with dollar amounts, percentages, and source citations
+ */
+export function decomposeBill(input: BillInput): BillBreakdown {
+  const tariff = getTariffForServiceClass(input.serviceClass);
+  const t = tariff.components;
+  const days = daysBetween(input.billingPeriodStart, input.billingPeriodEnd);
 
-export interface ComponentBreakdown {
-  name: string;
-  label: string;
-  cents: number;
-  dollars: number;
-  percent: number;
-  canControl: boolean;
-}
+  // Calculate raw component amounts from tariff rates
+  const energySupply = input.kwhUsage * (t.energySupply.ratePerKwh || 0);
+  const capacity = input.kwhUsage * (t.capacity.ratePerKwh || 0);
+  const transmission = input.kwhUsage * (t.transmission.ratePerKwh || 0);
+  const distribution =
+    input.kwhUsage * (t.distribution.ratePerKwh || 0) +
+    (t.distribution.fixedCharge || 0);
+  const cleanEnergy = input.kwhUsage * (t.cleanEnergy.ratePerKwh || 0);
 
-export interface DecomposeResult {
-  input: DecomposeInput;
-  components: ComponentBreakdown[];
-  usageDrivenCents: number;
-  systemDrivenCents: number;
-  usageDrivenPercent: number;
-  systemDrivenPercent: number;
-  totalCalculatedCents: number;
-  attributions: Attribution[];
-  actionableRecs: Recommendation[];
-  honestRecs: Recommendation[];
-}
+  const subtotal = energySupply + capacity + transmission + distribution + cleanEnergy;
+  const taxes = subtotal * (t.taxes.rate || 0);
+  const calculatedTotal = subtotal + taxes;
 
-export function decomposeBill(input: DecomposeInput): DecomposeResult {
-  const tariffResult = applyTariff(input.kwhUsage);
-  const totalCalculatedCents =
-    tariffResult.energySupply +
-    tariffResult.capacity +
-    tariffResult.transmission +
-    tariffResult.distribution +
-    tariffResult.taxesSurcharges;
+  // Scale factor reconciles our simplified tariff model with the actual bill
+  // This is necessary because Con Edison's full tariff includes monthly adjustment
+  // clauses, seasonal riders, and other variable charges that shift month to month
+  const scaleFactor = input.totalAmount / calculatedTotal;
 
-  const userTotalCents = Math.round(input.totalAmount * 100);
-  const scaleFactor =
-    totalCalculatedCents > 0 ? userTotalCents / totalCalculatedCents : 1;
-
-  const scaled = {
-    energySupply: Math.round(tariffResult.energySupply * scaleFactor),
-    capacity: Math.round(tariffResult.capacity * scaleFactor),
-    transmission: Math.round(tariffResult.transmission * scaleFactor),
-    distribution: Math.round(tariffResult.distribution * scaleFactor),
-    taxesSurcharges: Math.round(tariffResult.taxesSurcharges * scaleFactor),
+  // Build component array with colors for the pie chart
+  const componentColors = {
+    energySupply: "#2563eb", // blue — the controllable one
+    capacity: "#dc2626", // red
+    transmission: "#ea580c", // orange
+    distribution: "#d97706", // amber
+    cleanEnergy: "#059669", // emerald
+    taxes: "#7c3aed", // violet
   };
 
-  const total =
-    scaled.energySupply +
-    scaled.capacity +
-    scaled.transmission +
-    scaled.distribution +
-    scaled.taxesSurcharges;
-
-  const usageDrivenCents = scaled.energySupply + scaled.transmission;
-  const systemDrivenCents =
-    scaled.capacity + scaled.distribution + scaled.taxesSurcharges;
-
-  const usageDrivenPercent = total > 0 ? (usageDrivenCents / total) * 100 : 0;
-  const systemDrivenPercent = total > 0 ? (systemDrivenCents / total) * 100 : 0;
-
-  const components: ComponentBreakdown[] = [
-    {
-      name: "energySupply",
-      label: "Energy Supply",
-      cents: scaled.energySupply,
-      dollars: scaled.energySupply / 100,
-      percent: total > 0 ? (scaled.energySupply / total) * 100 : 0,
-      canControl: true,
-    },
-    {
-      name: "capacity",
-      label: "Capacity Charges",
-      cents: scaled.capacity,
-      dollars: scaled.capacity / 100,
-      percent: total > 0 ? (scaled.capacity / total) * 100 : 0,
-      canControl: false,
-    },
-    {
-      name: "transmission",
-      label: "Transmission",
-      cents: scaled.transmission,
-      dollars: scaled.transmission / 100,
-      percent: total > 0 ? (scaled.transmission / total) * 100 : 0,
-      canControl: false,
-    },
-    {
-      name: "distribution",
-      label: "Distribution",
-      cents: scaled.distribution,
-      dollars: scaled.distribution / 100,
-      percent: total > 0 ? (scaled.distribution / total) * 100 : 0,
-      canControl: false,
-    },
-    {
-      name: "taxesSurcharges",
-      label: "Taxes & Surcharges",
-      cents: scaled.taxesSurcharges,
-      dollars: scaled.taxesSurcharges / 100,
-      percent: total > 0 ? (scaled.taxesSurcharges / total) * 100 : 0,
-      canControl: false,
-    },
+  const rawComponents = [
+    { key: "energySupply", raw: energySupply, canControl: true },
+    { key: "capacity", raw: capacity, canControl: false },
+    { key: "transmission", raw: transmission, canControl: false },
+    { key: "distribution", raw: distribution, canControl: false },
+    { key: "cleanEnergy", raw: cleanEnergy, canControl: false },
+    { key: "taxes", raw: taxes, canControl: false },
   ];
 
-  const attributions = buildAttributions();
-  const { actionable, honest } = generateRecommendations(
-    usageDrivenPercent,
-    systemDrivenPercent,
-    input.kwhUsage,
-    total
-  );
+  const components: BillComponent[] = rawComponents.map((rc) => {
+    const def = t[rc.key as keyof typeof t];
+    return {
+      name: def.name,
+      amount: rc.raw * scaleFactor,
+      percent: (rc.raw / calculatedTotal) * 100,
+      usageDriven: def.usageDriven,
+      canControl: rc.canControl,
+      description: def.description,
+      source: def.source,
+      color: componentColors[rc.key as keyof typeof componentColors],
+    };
+  });
+
+  const controllable = components.filter((c) => c.canControl);
+  const uncontrollable = components.filter((c) => !c.canControl);
+  const controllableTotal = controllable.reduce((sum, c) => sum + c.amount, 0);
+  const uncontrollableTotal = uncontrollable.reduce((sum, c) => sum + c.amount, 0);
 
   return {
-    input,
     components,
-    usageDrivenCents,
-    systemDrivenCents,
-    usageDrivenPercent,
-    systemDrivenPercent,
-    totalCalculatedCents: total,
-    attributions,
-    actionableRecs: actionable,
-    honestRecs: honest,
+    controllable,
+    uncontrollable,
+    controllableTotal,
+    uncontrollableTotal,
+    controllablePercent: (controllableTotal / input.totalAmount) * 100,
+    uncontrollablePercent: (uncontrollableTotal / input.totalAmount) * 100,
+    effectiveRate: input.totalAmount / input.kwhUsage,
+    days,
+    scaleFactor,
   };
 }

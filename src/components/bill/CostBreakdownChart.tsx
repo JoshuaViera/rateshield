@@ -1,60 +1,74 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { ComponentBreakdown } from "@/lib/engine/decompose";
+import { BillComponent } from "@/lib/types/bill";
 
-const COLORS = ["#2563EB", "#DC2626", "#F59E0B", "#059669", "#7C3AED"];
+interface PieChartProps {
+  components: BillComponent[];
+  size?: number;
+}
 
 export default function CostBreakdownChart({
   components,
-}: {
-  components: ComponentBreakdown[];
-}) {
-  const data = components.map((c) => ({
-    name: c.label,
-    value: c.dollars,
-    percent: c.percent,
-  }));
+  size = 240,
+}: PieChartProps) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 12;
+  let cumulative = 0;
+  const total = components.reduce((s, c) => s + c.percent, 0);
+
+  const slices = components.map((c) => {
+    const startAngle = (cumulative / total) * 360;
+    cumulative += c.percent;
+    const endAngle = (cumulative / total) * 360;
+    const startRad = ((startAngle - 90) * Math.PI) / 180;
+    const endRad = ((endAngle - 90) * Math.PI) / 180;
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+    const x1 = cx + r * Math.cos(startRad);
+    const y1 = cy + r * Math.sin(startRad);
+    const x2 = cx + r * Math.cos(endRad);
+    const y2 = cy + r * Math.sin(endRad);
+    return {
+      ...c,
+      d: `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`,
+    };
+  });
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer width="100%" height={320}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            outerRadius={130}
-            innerRadius={60}
-            dataKey="value"
+    <div className="flex flex-col items-center gap-4">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="drop-shadow-sm"
+      >
+        {slices.map((s, i) => (
+          <path
+            key={i}
+            d={s.d}
+            fill={s.color}
             stroke="#fff"
-            strokeWidth={2}
-          >
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value) => [`$${Number(value).toFixed(2)}`, ""]}
-            contentStyle={{
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-              fontSize: "14px",
-            }}
+            strokeWidth="2.5"
+            className="transition-opacity hover:opacity-80"
           />
-        </PieChart>
-      </ResponsiveContainer>
+        ))}
+        <circle cx={cx} cy={cy} r={r * 0.42} fill="#fff" />
+      </svg>
 
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        {data.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
+      {/* Legend */}
+      <div className="w-full space-y-2">
+        {components.map((c, i) => (
+          <div key={i} className="flex items-center gap-2.5">
             <div
-              className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: COLORS[i % COLORS.length] }}
+              className="w-3 h-3 rounded-sm flex-shrink-0"
+              style={{ backgroundColor: c.color }}
             />
-            <span className="text-gray-600">{item.name}</span>
-            <span className="ml-auto font-semibold">
-              ${item.value.toFixed(2)}
+            <span className="flex-1 text-sm text-gray-700">{c.name}</span>
+            <span className="text-sm font-bold text-gray-900">
+              ${c.amount.toFixed(2)}
+            </span>
+            <span className="text-xs text-gray-400 w-10 text-right">
+              {Math.round(c.percent)}%
             </span>
           </div>
         ))}

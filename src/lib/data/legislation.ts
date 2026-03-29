@@ -1,46 +1,63 @@
-export const LEGISLATION = [
+import { LegislationItem } from "../types/tariff";
+
+/**
+ * Active NY legislation and regulatory proceedings that could affect
+ * Con Edison residential electricity bills.
+ *
+ * All data verified as of March 2026.
+ * Sources: nysenate.gov, governor.ny.gov
+ */
+export const ACTIVE_LEGISLATION: LegislationItem[] = [
   {
-    billNumber: "S9144",
+    id: "S9144",
+    number: "S9144",
     title: "Data Center Moratorium Act",
+    sponsor: "Sen. Liz Krueger & Sen. Kristen Gonzalez",
+    introduced: "February 6, 2026",
+    status: "In Committee — Environmental Conservation",
     summary:
-      "Proposes a 3-year moratorium on new data center construction permits in New York State. Would halt the rapid expansion of energy-intensive facilities that are driving up electricity demand and grid costs for all ratepayers.",
-    status: "Introduced — Referred to Committee",
-    sponsor: "NY State Senate",
-    potentialCostImpact:
-      "Could prevent an estimated 7,000+ MW of new data center demand from connecting to the grid by 2030, slowing the capacity cost increases currently being passed to residential customers.",
-    sourceUrl: "https://www.nysenate.gov/legislation/bills/2025/S9144",
+      "Imposes a 3-year moratorium on new data center permits statewide for facilities using 20+ MW. Requires the Department of Environmental Conservation to complete a full environmental impact study and the Public Service Commission to issue orders preventing data center costs from being passed to residential customers. Described as the strongest data center moratorium bill in the country.",
+    costImpact:
+      "Would prevent future capacity cost increases driven by data center demand growth. As of January 2026, NYISO's interconnection queue has 48 large-load projects totaling 11+ GW of demand — this bill would pause that pipeline while protections are put in place.",
+    url: "https://www.nysenate.gov/legislation/bills/2025/S9144",
   },
   {
-    billNumber: "S8540",
-    title: "Accountability of Costs for Data Centers Act",
+    id: "S8540",
+    number: "S8540",
+    title: 'Accountability of Costs for Data Centers Act (AC/DC Act)',
+    sponsor: "Sen. Kristen Gonzalez",
+    introduced: "October 22, 2025",
+    status: "In Committee — Rules",
     summary:
-      "Would create a separate utility rate classification for data centers, preventing their grid upgrade and infrastructure costs from being shared with residential and small business customers. Data centers would pay their own way.",
-    status: "Introduced — Referred to Committee",
-    sponsor: "NY State Senate",
-    potentialCostImpact:
-      "If enacted, could redirect data center infrastructure costs away from residential bills. Your system-driven charges could decrease as data centers absorb their own grid connection costs.",
-    sourceUrl: "https://www.nysenate.gov/legislation/bills/2025/S8540",
+      "Requires every electric utility in New York to create a separate service classification for large energy use facilities (data centers). This means data centers would pay rates based on their actual grid costs instead of sharing infrastructure expenses with residential customers. The PSC must ensure all new service classifications are implemented by June 2030.",
+    costImpact:
+      "Would directly reduce the capacity and delivery charges on your bill by isolating data center grid costs into their own rate class. Currently, residential customers subsidize the infrastructure upgrades needed for data centers.",
+    url: "https://www.nysenate.gov/legislation/bills/2025/S8540",
   },
   {
-    billNumber: "S6394A",
-    title: "Data Center Surcharge Act",
+    id: "S6394A",
+    number: "S6394A",
+    title: "Sustainable Data Centers Act",
+    sponsor: "Sen. Kristen Gonzalez",
+    introduced: "2025 Session (Amended)",
+    status: "In Committee",
     summary:
-      "Would impose a surcharge on data center electricity consumption, with revenue credited directly to low-income residential ratepayers. Targets the largest energy consumers to subsidize those least able to afford rising costs.",
-    status: "Introduced — Referred to Committee",
-    sponsor: "NY State Senate",
-    potentialCostImpact:
-      "Could generate direct bill credits for qualifying low-income households. If you qualify for assistance programs, this bill could reduce your monthly costs.",
-    sourceUrl: "https://www.nysenate.gov/legislation/bills/2025/S6394A",
+      "Establishes a data center surcharge with proceeds distributed as monthly bill credits to low- and moderate-income utility customers in host communities. Bans state tax incentives for data centers using fossil fuel power purchase agreements. Requires data centers to source 33% renewable energy by 2030, 67% by 2035, and 100% by 2040.",
+    costImpact:
+      "Would create direct bill credits for qualifying low- and moderate-income households funded by a surcharge on data center operators. If you're income-eligible, this could reduce your monthly bill.",
+    url: "https://www.nysenate.gov/legislation/bills/2025/S6394/amendment/A",
   },
   {
-    billNumber: "GOV-2026-01",
-    title: "Governor Hochul PSC Directive",
-    summary:
-      "Governor Hochul directed the NY Public Service Commission to review whether energy-intensive industries — particularly data centers — are paying their fair share of grid costs. This review could lead to new rate structures that shift costs away from residential customers.",
-    status: "Active — PSC Review Underway",
+    id: "HOCHUL-PSC",
+    number: "Energize NY",
+    title: "Gov. Hochul's PSC Proceeding on Data Center Costs",
     sponsor: "Governor Kathy Hochul",
-    potentialCostImpact:
-      "The PSC review could result in new rate structures within 12-18 months that reallocate infrastructure costs more equitably between data centers and residential customers.",
-    sourceUrl: "https://www.governor.ny.gov",
+    introduced: "February 12, 2026",
+    status: "Active PSC Proceeding",
+    summary:
+      'The PSC launched a formal proceeding to review interconnection processes, cost-allocation mechanisms, and tariff structures for large energy users. Governor Hochul\'s directive: "These industries must pay more; if they do not, they must supply their own energy." The DPS will gather stakeholder input, host a technical conference, and prepare a white paper with recommendations.',
+    costImpact:
+      "Could restructure how grid upgrade costs are allocated, potentially shifting billions in infrastructure costs from residential ratepayers to the data center companies driving the demand. This is the broadest regulatory action — it could affect all five uncontrollable components on your bill.",
+    url: "https://www.governor.ny.gov/news/governor-hochul-announces-psc-proceeding-her-plan-ensure-data-centers-pay-their-fair-share",
   },
 ];
